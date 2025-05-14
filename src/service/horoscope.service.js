@@ -4,24 +4,38 @@ import { findByZodiacAndDate } from '../repo/horoscope.repository.js';
 import { save } from '../repo/user_horoscope_history.repository.js';
 import { UserHoroscopeHistory } from '../model/user-horoscope-history.js';
 
+/**
+ * Retrieves the horoscope for today for a given user ID and zodiac.
+ *
+ * @param {string} userId - The user ID.
+ * @param {Zodiac} zodiac - The zodiac.
+ *
+ * @returns {string} The horoscope.
+ *
+ * @throws {Error} If no horoscope was found for the given zodiac and date.
+ */
 export const getHoroscopeToday = async (userId, zodiac) => {
     const today = format(new Date(), 'yyyy-MM-dd');
-    let horoscope = await getOrUpdateHoroscopeCache(userId, zodiac, today);
+    let horoscope = getOrUpdateHoroscopeCache(userId, zodiac, today);
     await createUserHoroscopeHistory(userId, horoscope);
     return horoscope;
 };
 
+/**
+ * Retrieves horoscopes for the last `numDays` for a given user and zodiac sign.
+ *
+ * @param {string} userId - The user id.
+ * @param {string} zodiac - The zodiac sign.
+ * @param {number} numDays - The number of days to retrieve horoscopes for.
+ * @returns {Promise<Array<string>>} - A promise that resolves to an array of horoscopes.
+ */
 export const getHoroscopeLastNDays = async (userId, zodiac, numDays) => {
     let date = new Date();
     const horoscopes = [];
 
     for (let i = 0; i < numDays; i++) {
         const dateStr = format(date, 'yyyy-MM-dd');
-        let horoscope = await getOrUpdateHoroscopeCache(
-            userId,
-            zodiac,
-            dateStr
-        );
+        let horoscope = getOrUpdateHoroscopeCache(userId, zodiac, dateStr);
         await createUserHoroscopeHistory(userId, horoscope);
         horoscopes.push(horoscope);
         date = subDays(date, 1);
@@ -30,6 +44,18 @@ export const getHoroscopeLastNDays = async (userId, zodiac, numDays) => {
     return horoscopes;
 };
 
+/**
+ * Retrieves a horoscope for a given zodiac and date. If the horoscope is not
+ * cached, it will be retrieved from the database and cached for future use.
+ *
+ * @param {string} userId - The user ID.
+ * @param {Zodiac} zodiac - The zodiac.
+ * @param {string} date - The date, in the format "yyyy-MM-dd".
+ *
+ * @returns {string} The horoscope.
+ *
+ * @throws {Error} If no horoscope was found for the given zodiac and date.
+ */
 const getOrUpdateHoroscopeCache = async (userId, zodiac, date) => {
     const key = `${zodiac}:${date}`;
 
@@ -47,6 +73,11 @@ const getOrUpdateHoroscopeCache = async (userId, zodiac, date) => {
     return record.horoscope;
 };
 
+/**
+ * Creates a user horoscope history entry for the given user and horoscope.
+ * @param {string} userId - The user id.
+ * @param {string} horoscope - The horoscope.
+ */
 const createUserHoroscopeHistory = async (userId, horoscope) => {
-    save(new UserHoroscopeHistory({ userId, horoscope }));
+    await save(new UserHoroscopeHistory({ userId, horoscope }));
 };
